@@ -4,11 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Translation;
+use App\Services\TranslationCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class TranslationController extends Controller
 {
+    protected $translationCacheService;
+    
+    public function __construct(TranslationCacheService $translationCacheService)
+    {
+        $this->translationCacheService = $translationCacheService;
+    }
+
     /**
      * Display a listing of translations with optional filtering.
      *
@@ -177,52 +185,13 @@ class TranslationController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function export(Request $request)
-{
-    $cacheKey = 'translations_export';
-    
-    // Add locale and tag to cache key if provided
-    if ($request->has('locale')) {
-        $cacheKey .= '_' . $request->locale;
+    {
+        $locale = $request->get('locale');
+        $tag = $request->get('tag');
+        
+        // Get translations from cache service (handles lazy loading automatically)
+        $translations = $this->translationCacheService->getTranslations($locale, $tag);
+        
+        return response()->json($translations);
     }
-    
-    if ($request->has('tag')) {
-        $cacheKey .= '_' . $request->tag;
-    }
-    
-    // Cache for 5 minutes to ensure updated translations are available
-    $translations = cache()->remember($cacheKey, now()->addMinutes(5), function () use ($request) {
-        $query = Translation::query();
-
-        // Filter by locale if provided
-        if ($request->has('locale')) {
-            $query->where('locale', $request->locale);
-        }
-
-        // Filter by tag if provided
-        if ($request->has('tag')) {
-            $query->where('tag', $request->tag);
-        }
-
-        // Get all translations
-        $translations = $query->get();
-
-        // Group by locale for frontend consumption
-        $groupedTranslations = [];
-        foreach ($translations as $translation) {
-            if (!isset($groupedTranslations[$translation->locale])) {
-                $groupedTranslations[$translation->locale] = [];
-            }
-            
-            if (!isset($groupedTranslations[$translation->locale][$translation->tag])) {
-                $groupedTranslations[$translation->locale][$translation->tag] = [];
-            }
-            
-            $groupedTranslations[$translation->locale][$translation->tag][$translation->key] = $translation->value;
-        }
-
-        return $groupedTranslations;
-    });
-
-    return response()->json($translations);
-}
 }

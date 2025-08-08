@@ -4,7 +4,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
-use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -18,7 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         //
         $middleware->api([
             EnsureFrontendRequestsAreStateful::class,
-            ThrottleRequests::class.':api',
             SubstituteBindings::class,
         ]);
     })
